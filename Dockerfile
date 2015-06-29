@@ -10,7 +10,7 @@ ENV HADOOP_VERSION 2.7.0
 
 # install dev tools
 RUN apt-get update
-RUN apt-get install -y curl tar sudo openssh-server openssh-client rsync
+RUN apt-get install -y wget build-essential curl tar sudo openssh-server openssh-client rsync
 
 # passwordless ssh
 RUN rm -f /etc/ssh/ssh_host_dsa_key /etc/ssh/ssh_host_rsa_key /root/.ssh/id_rsa
@@ -91,3 +91,28 @@ RUN service ssh start && $HADOOP_PREFIX/etc/hadoop/hadoop-env.sh && $HADOOP_PREF
 CMD ["/etc/bootstrap.sh", "-d"]
 
 EXPOSE 50020 50090 50070 50010 50075 8031 8032 8033 8040 8042 49707 22 8088 8030
+
+# CUDA section
+
+# Environment variables
+ENV CUDA_DIR /usr/local/cuda
+ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CUDA_DIR/lib64
+ENV PATH=$PATH:$CUDA_DIR/bin
+
+ENV CUDA_RUN http://developer.download.nvidia.com/compute/cuda/6_5/rel/installers/cuda_6.5.14_linux_64.run
+ENV NVIDIA_RUN http://us.download.nvidia.com/XFree86/Linux-x86_64/346.72/NVIDIA-Linux-x86_64-346.72.run
+ENV DRIVERS_DIR /opt/nvidia_installers
+
+RUN mkdir -p $DRIVERS_DIR
+RUN wget $CUDA_RUN -P $DRIVERS_DIR
+RUN wget $NVIDIA_RUN -P $DRIVERS_DIR
+RUN chmod +x $DRIVERS_DIR/*.run
+
+# Installing NVIDIA/CUDA drivers/samples
+RUN $DRIVERS_DIR/cuda_6.5.14_linux_64.run -extract=$DRIVERS_DIR
+RUN $DRIVERS_DIR/NVIDIA-Linux-x86_64-346.72.run -s -N --no-kernel-module
+RUN $DRIVERS_DIR/cuda-linux64-rel-6.5.14-18749181.run -noprompt
+RUN $DRIVERS_DIR/cuda-samples-linux-6.5.14-18745345.run -noprompt -cudaprefix=$CUDA_DIR
+
+# Removing CUDA installer files
+RUN rm -rf $DRIVERS_DIR
